@@ -1,36 +1,39 @@
-# Vectoren REM
+# Vectoren REM – Module 5 masterprototype
 
-Adaptieve remediëringssite voor **H1 Vectoren – 3SO**.
+Deze versie focust bewust op **optellen en aftrekken van vectoren** als scharnier tussen elementaire vectorrekening en toepassingen in meetkundige figuren en ruimtefiguren.
 
-## Wat zit erin?
-- pagina-per-pagina navigatie (geen lange scrollleerlijn)
-- drie remediëringsmodules:
-  1. vectoren vergelijken
-  2. vectoren tekenen
-  3. vectoruitdrukkingen vereenvoudigen
-- korte diagnose per module
-- fout antwoord → gerichte uitleg → basisoefeningen
-- voldoende basis → complexere oefeningen
-- onvoldoende basis → extra uitleg + nieuwe poging
-- voortgang lokaal bewaard met `localStorage`
-- geen externe libraries nodig
+## Didactisch pad
+1. vector als route lezen
+2. aftrekken = tegengestelde vector optellen
+3. vectoren herschikken tot een ketting
+4. transfer naar een meetkundige figuur
+5. vooruitblik naar een ruimtefiguur
 
-## Publiceren op GitHub Pages
-1. Maak een nieuwe repository, bv. `vectoren-rem`.
-2. Upload `index.html`, `style.css`, `app.js` en deze `README.md` in de root van de repository.
-3. Ga naar **Settings → Pages**.
-4. Kies **Deploy from a branch**.
-5. Selecteer branch `main` en map `/ (root)`.
-6. Klik **Save**.
+De module bevat:
+- korte startdiagnose
+- foutgestuurde uitleg
+- eenvoudige herstelvragen
+- misconceptcontrole rond “letters schrappen”
+- minvector/remediëring
+- interactieve sleepoefening voor het herschikken van vectoren
+- transfer naar een vierhoek
+- eenvoudige 3D-vooruitblik in een balk
+- lokale voortgang via `localStorage`
 
-Na enkele minuten staat de site online via de GitHub Pages-link.
+## Bestaande GitHub-repository bijwerken via GitHub Desktop
+1. Open je lokale map `Vectoren-REM` via **Repository → Show in Finder**.
+2. Vervang daar `index.html`, `style.css`, `app.js` en eventueel `README.md` door de bestanden uit deze map.
+3. Ga terug naar GitHub Desktop.
+4. Controleer de wijzigingen onder **Changes**.
+5. Commit bijvoorbeeld als `Module 5 adaptieve remediëring`.
+6. Klik **Push origin**.
 
-## Later adaptiever maken
-Deze versie werkt volledig lokaal en is dus ideaal als eerste REM-prototype. Een volgende versie kan via Supabase per leerling opslaan:
-- fouttype per vraag
-- aantal pogingen
-- tijd per onderdeel
-- beheersingsniveau per leerdoel
-- aanbevolen volgende oefenroute
+GitHub Pages gebruikt daarna automatisch de nieuwe versie.
 
-Daarvoor kan dezelfde frontend behouden blijven en enkel de opslag/adaptiviteitslaag uitgebreid worden.
+## Volgende uitbreidingen
+- meerdere varianten per diagnosevraag
+- oranje/rode leerpaden in plaats van één hoofdlijn
+- klik- of tekenopdrachten in figuren
+- uitgebreidere ruimtefiguren
+- score per deelvaardigheid
+- leerlingopslag via Supabase

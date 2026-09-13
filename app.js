@@ -1,161 +1,77 @@
-const app = document.getElementById('app');
-const progressBar = document.getElementById('progressBar');
-const progressText = document.getElementById('progressText');
-const progressPct = document.getElementById('progressPct');
-const STORAGE = 'vectoren-rem-v1';
+const app=document.getElementById('app');
+const progressBar=document.getElementById('progressBar');
+const progressLabel=document.getElementById('progressLabel');
+const progressPct=document.getElementById('progressPct');
+const STORAGE='vectoren-rem-module5-v1';
 
-const modules = [
-  {id:'vergelijk', title:'Vectoren vergelijken', short:'Gelijk, tegengesteld of geen van beide', color:'mint'},
-  {id:'tekenen', title:'Vectoren tekenen', short:'Tegengestelde vector en vectorsom', color:'sky'},
-  {id:'vereenvoudigen', title:'Vectoruitdrukkingen', short:'Schrijf als één vector', color:'amber'}
-];
-
-let state = load();
-let current = {view:'home', module:null, stage:null, qIndex:0, score:0, answers:[]};
-
-function freshState(){ return {done:{}, attempts:{}, lastModule:null}; }
-function load(){ try{return JSON.parse(localStorage.getItem(STORAGE))||freshState()}catch{return freshState()} }
-function save(){ localStorage.setItem(STORAGE, JSON.stringify(state)); }
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function v(x){ return `<span class="vector">${esc(x)}</span>`; }
-function setProgress(label,pct){progressText.textContent=label; progressPct.textContent=`${pct}%`; progressBar.style.width=`${pct}%`;}
-function screen(html){ app.innerHTML=`<section class="screen"><div class="panel">${html}</div></section>`; window.scrollTo({top:0,behavior:'smooth'}); }
+let state=loadState();
+function loadState(){try{return JSON.parse(localStorage.getItem(STORAGE))||fresh()}catch{return fresh()}}
+function fresh(){return{stage:'start',scores:{diag:0,basis:0,min:0,transfer:0},mastery:'nieuw'}}
+function save(){localStorage.setItem(STORAGE,JSON.stringify(state))}
+function v(s){return `<span class="vector">${s}</span>`}
+function setProgress(label,pct){progressLabel.textContent=label;progressPct.textContent=`${pct}%`;progressBar.style.width=`${pct}%`}
+function screen(html){app.innerHTML=`<section class="screen"><div class="panel">${html}</div></section>`;window.scrollTo({top:0,behavior:'smooth'})}
+function path(active){
+ const labels=[['1','Route'],['2','Aftrekken'],['3','Herschikken'],['4','Meetkunde'],['5','Ruimte']];
+ return `<div class="path">${labels.map((x,i)=>`<div class="step ${i<active?'done':''} ${i===active?'active':''}"><b>${x[0]}. ${x[1]}</b>${['aansluiten','minvector','ketting bouwen','figuren','vooruitblik 3D'][i]}</div>`).join('')}</div>`
+}
 
 function home(){
-  current={view:'home',module:null,stage:null,qIndex:0,score:0,answers:[]};
-  const doneCount = modules.filter(m=>state.done[m.id]).length;
-  setProgress(doneCount ? `${doneCount}/3 modules afgerond` : 'Start', Math.round(doneCount/3*100));
-  screen(`
-    <span class="eyebrow">Remediëring na Toets 1</span>
-    <h1>Niet opnieuw alles.<br>Wel precies wat jij nodig hebt.</h1>
-    <p class="lead">Deze remediëring werkt <strong>pagina per pagina</strong>. Je start per onderdeel met een korte diagnose. Bij een fout antwoord krijg je eerst gerichte uitleg en eenvoudige oefeningen. Pas daarna ga je door naar moeilijkere toepassingen.</p>
-    <div class="note"><strong>Doel:</strong> een leerling die rond 50% scoorde, krijgt geen lange herhaling van de volledige leerstof, maar een kort adaptief traject per fouttype.</div>
-    <div class="grid3">
-      ${modules.map((m,i)=>`<article class="module-card"><div class="num">${i+1}</div><h3>${m.title}</h3><p>${m.short}</p><span class="status">${state.done[m.id]?'✓ afgerond':'start met diagnose'}</span><div class="actions"><button class="btn secondary" onclick="startDiagnostic('${m.id}')">${state.done[m.id]?'Opnieuw oefenen':'Start'}</button></div></article>`).join('')}
-    </div>
-    <div class="actions"><button class="btn" onclick="startRecommended()">Start aanbevolen traject</button></div>
-  `);
+ setProgress('Module 5 • start',0);state.stage='start';save();
+ screen(`<span class="eyebrow">Mastermodule remediëring</span><h1>Optellen en aftrekken van vectoren</h1><p class="lead">We bouwen niet van formule naar formule, maar van <strong>vector als route</strong> naar <strong>vectorrekening in meetkundige figuren</strong>. De site past het traject aan op basis van fouten.</p>
+ ${path(-1)}
+ <div class="note"><strong>Einddoel:</strong> niet alleen ${v('AB')}+${v('BC')} kunnen vereenvoudigen, maar dezelfde gedachte later herkennen in driehoeken, vierhoeken en ruimtefiguren.</div>
+ <div class="actions"><button class="btn" onclick="diag1()">Start diagnose</button><button class="btn secondary" onclick="teacherOverview()">Bekijk didactisch pad</button></div>`)
 }
 
-function startRecommended(){
-  const next=modules.find(m=>!state.done[m.id])||modules[0];
-  startDiagnostic(next.id);
+function teacherOverview(){setProgress('Didactisch pad',5);screen(`<span class="eyebrow">Overzicht</span><h2>Zo werkt deze remediëring</h2><p class="lead">Elke fout stuurt de leerling naar een kleiner onderliggend probleem. Pas wanneer de basis stabiel is, volgt transfer.</p>${path(-1)}
+ <div class="status-grid"><div class="status-card green"><strong>Groen</strong>basis + transfer lukt</div><div class="status-card orange"><strong>Oranje</strong>basis lukt, transfer nog onzeker</div><div class="status-card red"><strong>Rood</strong>fundamenteel misconcept → terug naar uitleg</div></div>
+ <div class="actions"><button class="btn" onclick="diag1()">Start als leerling</button><button class="btn secondary" onclick="home()">Terug</button></div>`)}
+
+function mcq({label,pct,eyebrow,title,q,choices,correct,onCorrect,onWrong,whyCorrect,whyWrong}){
+ setProgress(label,pct);screen(`<span class="eyebrow">${eyebrow}</span><h2>${title}</h2><div class="question"><h3>${q}</h3><div class="choices">${choices.map((c,i)=>`<button class="choice" onclick="choose(this,${i},${correct},'${onCorrect}','${onWrong}')">${c}</button>`).join('')}</div><div id="feedback"></div></div>`);
+ window._whyCorrect=whyCorrect;window._whyWrong=whyWrong;
+}
+function choose(btn,index,correct,onCorrect,onWrong){
+ document.querySelectorAll('.choice').forEach(b=>b.disabled=true);const fb=document.getElementById('feedback');
+ if(index===correct){btn.classList.add('correct');fb.innerHTML=`<div class="feedback ok"><strong>Goed.</strong> ${window._whyCorrect||''}</div><div class="actions"><button class="btn" onclick="${onCorrect}()">Verder</button></div>`}
+ else{btn.classList.add('wrong');document.querySelectorAll('.choice')[correct].classList.add('correct');fb.innerHTML=`<div class="feedback bad"><strong>Nog niet.</strong> ${window._whyWrong||''}</div><div class="actions"><button class="btn" onclick="${onWrong}()">Bekijk gerichte hulp</button></div>`}
 }
 
-const content = {
-  vergelijk:{
-    diagnostic:[
-      {q:`Welke drie kenmerken moeten overeenkomen opdat twee vectoren <strong>gelijk</strong> zijn?`, choices:['richting, zin en grootte','beginpunt, eindpunt en ligging','richting en beginpunt','zin en eindpunt'], correct:0, explain:'Gelijke vectoren hebben dezelfde richting, dezelfde zin én dezelfde grootte.'},
-      {q:`Twee even lange vectoren liggen op evenwijdige rechten, maar wijzen in tegengestelde zin. Ze zijn …`,choices:['gelijk','tegengesteld','geen van beide'],correct:1,explain:'Zelfde richting en grootte, maar tegengestelde zin ⇒ tegengestelde vectoren.'}
-    ],
-    lesson:{
-      title:'Stap 1 — Vergelijk altijd in dezelfde volgorde',
-      body:`<div class="lesson"><div class="explain"><h3>Controleer 3 kenmerken</h3><ol><li><strong>Richting:</strong> liggen de vectoren evenwijdig?</li><li><strong>Zin:</strong> wijzen de pijlen dezelfde kant op?</li><li><strong>Grootte:</strong> zijn ze even lang?</li></ol><p class="rule">Alle 3 gelijk → gelijke vectoren.<br>Richting + grootte gelijk, zin tegengesteld → tegengestelde vectoren.</p></div><div class="example"><strong>Belangrijk bij een figuur</strong><p>Laat je niet misleiden door de plaats van de pijl. Een vector mag verschoven worden zolang richting, zin en grootte behouden blijven.</p><span class="badge">plaats is géén kenmerk</span></div></div>`
-    },
-    basic:[
-      {q:`${v('a')} en ${v('b')} zijn even lang, evenwijdig en wijzen dezelfde kant op.`,choices:['gelijk','tegengesteld','geen van beide'],correct:0},
-      {q:`${v('p')} en ${v('q')} zijn evenwijdig en even lang, maar wijzen tegengesteld.`,choices:['gelijk','tegengesteld','geen van beide'],correct:1},
-      {q:`${v('u')} en ${v('v')} wijzen dezelfde kant op, maar ${v('u')} is langer.`,choices:['gelijk','tegengesteld','geen van beide'],correct:2}
-    ],
-    complex:[
-      {q:`In een parallellogram ABCD: wat geldt voor ${v('AB')} en ${v('DC')}?`,choices:['gelijk','tegengesteld','geen van beide'],correct:0,explain:'Overstaande zijden zijn evenwijdig en even lang; AB en DC hebben bovendien dezelfde zin.'},
-      {q:`In hetzelfde parallellogram: wat geldt voor ${v('AB')} en ${v('CD')}?`,choices:['gelijk','tegengesteld','geen van beide'],correct:1,explain:'AB en CD zijn even lang en evenwijdig, maar hebben tegengestelde zin.'}
-    ]
-  },
-  tekenen:{
-    diagnostic:[
-      {q:`Wat verandert er als je de tegengestelde vector ${v('-AB')} tekent?`,choices:['alleen de grootte','alleen de zin','richting en grootte','alles'],correct:1,explain:'De tegengestelde vector behoudt richting en grootte, maar keert de zin om.'},
-      {q:`Bij de parallellogrammethode voor ${v('u')} + ${v('v')}: waar begint de somvector?`,choices:['in het gemeenschappelijke beginpunt','in het eindpunt van u','in het midden van het parallellogram','dat maakt niet uit'],correct:0,explain:'De diagonaal vanuit het gemeenschappelijke beginpunt stelt de somvector voor.'}
-    ],
-    lesson:{title:'Stap 2 — Tekenen zonder coördinaten',body:`<div class="lesson"><div class="explain"><h3>Tegengestelde vector</h3><p>Voor ${v('PQ')} = −${v('AB')}:</p><ol><li>zelfde <strong>richting</strong> als ${v('AB')}</li><li>zelfde <strong>grootte</strong></li><li>tegengestelde <strong>zin</strong></li><li>begin in het opgegeven punt P</li></ol></div><div class="example"><strong>Som van vectoren</strong><p>Breng de vectoren met hun beginpunten samen. Maak het parallellogram. De diagonaal vanuit het gemeenschappelijke beginpunt is de som.</p><span class="badge">parallellogrammethode</span></div></div>`},
-    basic:[
-      {q:`Je tekent ${v('r')} = −${v('s')}. Welke uitspraak is fout?`,choices:['r en s zijn even lang','r en s zijn evenwijdig','r en s hebben dezelfde zin'],correct:2},
-      {q:`Bij ${v('u')} + ${v('v')} wijst de resultaatvector …`,choices:['van het gemeenschappelijke beginpunt naar de overstaande hoek','van het eindpunt van u naar het eindpunt van v','altijd horizontaal'],correct:0},
-      {q:`Als ${v('u')} en ${v('v')} gelijk en gelijkgericht zijn, is ${v('u')}+${v('v')} …`,choices:['even lang als u','twee keer zo lang als u','de nulvector'],correct:1}
-    ],
-    complex:[
-      {q:`Je moet ${v('z')} = ${v('u')} + ${v('v')} + ${v('w')} tekenen. Wat is een geldige aanpak?`,choices:['tel eerst u en v op en tel daarna w bij de resultante','keer alle pijlen om en tel dan op','gebruik alleen de langste twee vectoren'],correct:0},
-      {q:`Als ${v('v')} = −${v('u')}, wat is ${v('u')} + ${v('v')}?`,choices:['u','v','de nulvector'],correct:2}
-    ]
-  },
-  vereenvoudigen:{
-    diagnostic:[
-      {q:`Welke kettingregel is correct?`,choices:[`${v('AB')} + ${v('BC')} = ${v('AC')}`,`${v('AB')} + ${v('BC')} = ${v('CA')}`,`${v('AB')} - ${v('BC')} = ${v('AC')}`],correct:0,explain:'Kop-aan-staart: van A naar B en van B naar C geeft rechtstreeks van A naar C.'},
-      {q:`Wat gebeurt er met ${v('BC')} − ${v('BC')}?`,choices:[v('BC'),v('CB'),'de nulvector'],correct:2,explain:'Een vector min zichzelf is de nulvector.'}
-    ],
-    lesson:{title:'Stap 3 — Vereenvoudig met kettingen en tegengestelden',body:`<div class="lesson"><div class="explain"><h3>Drie vaste zetten</h3><ol><li><strong>Ketting:</strong> ${v('AB')} + ${v('BC')} = ${v('AC')}</li><li><strong>Min wordt tegengestelde:</strong> −${v('AB')} = ${v('BA')}</li><li><strong>Wegvallen:</strong> ${v('AB')} − ${v('AB')} = ${v('0')}</li></ol></div><div class="example"><strong>Werk doelgericht</strong><p>Zoek eerst termen die je kunt omkeren of schrappen. Bouw daarna een route: beginpunt → tussenpunt → eindpunt.</p><span class="badge">kop-aan-staart</span></div></div>`},
-    basic:[
-      {q:`${v('AB')} + ${v('BC')} = …`,choices:[v('AC'),v('CA'),v('AB')],correct:0},
-      {q:`−${v('DB')} = …`,choices:[v('BD'),v('DB'),'0'],correct:0},
-      {q:`${v('AB')} − ${v('AB')} = …`,choices:[v('BA'),'nulvector',v('AA')+' met lengte 1'],correct:1}
-    ],
-    complex:[
-      {q:`Vereenvoudig: ${v('DB')} − ${v('DC')} + ${v('AC')}`,choices:[v('AB'),v('BA'),v('DC')],correct:0,explain:`−${v('DC')} = ${v('CD')}; dus ${v('DB')} + ${v('CD')} + ${v('AC')}. Herschikken: ${v('AC')} + ${v('CD')} + ${v('DB')} = ${v('AB')}.`},
-      {q:`Vereenvoudig: ${v('AB')} − ${v('DB')} − ${v('AD')}`,choices:['nulvector',v('AB'),v('DA')],correct:0,explain:`−${v('DB')}=${v('BD')} en −${v('AD')}=${v('DA')}; ${v('AB')}+${v('BD')}=${v('AD')}; daarna ${v('AD')}+${v('DA')}=0.`},
-      {q:`Vereenvoudig: ${v('AB')} − ${v('BC')} + ${v('BC')} − ${v('AB')}`,choices:['nulvector',v('AC'),v('BA')],correct:0,explain:'De middelste termen vallen weg en ook AB − AB = 0.'}
-    ]
-  }
-};
+function diag1(){mcq({label:'1/5 • route lezen',pct:10,eyebrow:'Startdiagnose',title:'Kun je een vectorroute lezen?',q:`${v('AB')} + ${v('BC')} = …`,choices:[v('AC'),v('CA'),v('AB')],correct:0,onCorrect:'diag2',onWrong:'lessonRoute',whyCorrect:'Je volgt A → B → C, dus rechtstreeks A → C.',whyWrong:'Kijk niet naar letters die je kunt “wegstrepen”. Denk aan een route: waar eindigt de eerste vector en waar begint de tweede?'})}
+function diag2(){mcq({label:'1/5 • diagnose',pct:16,eyebrow:'Misconceptcontrole',title:'Sluit de ketting altijd aan?',q:`Wat is het probleem bij ${v('AB')} + ${v('CB')}?`,choices:['Geen probleem: B valt weg','De eerste vector eindigt in B, maar de tweede begint in C','De vectoren zijn automatisch tegengesteld'],correct:1,onCorrect:'basicRoute',onWrong:'lessonRoute',whyCorrect:'Precies. De kop-staartketting sluit niet aan.',whyWrong:'“Binnenste letters schrappen” is geen geldige regel. Eerst moet de route werkelijk aansluiten.'})}
 
-function startDiagnostic(id){ current={view:'quiz',module:id,stage:'diagnostic',qIndex:0,score:0,answers:[]}; state.lastModule=id; save(); renderQuiz(); }
-function renderQuiz(){
-  const m=content[current.module]; const qs=m[current.stage]; const q=qs[current.qIndex];
-  const idx=modules.findIndex(x=>x.id===current.module); const stagePct={diagnostic:8,basic:18,complex:28}[current.stage];
-  setProgress(`${modules[idx].title} • ${labelStage(current.stage)}`, Math.round((idx*33)+stagePct));
-  screen(`
-    <span class="eyebrow">${labelStage(current.stage)}</span>
-    <h2>${modules[idx].title}</h2>
-    <div class="levels"><span class="level ${current.stage==='diagnostic'?'active':''}">Diagnose</span><span class="level ${current.stage==='basic'?'active':''}">Basis</span><span class="level ${current.stage==='complex'?'active':''}">Verdieping</span></div>
-    <div class="question"><span class="badge">Vraag ${current.qIndex+1} van ${qs.length}</span><h3>${q.q}</h3><div class="choices" id="choices">${q.choices.map((c,i)=>`<button class="choice" onclick="answer(${i})">${c}</button>`).join('')}</div><div id="feedback"></div></div>
-    <div class="actions"><button class="btn secondary" onclick="home()">Terug naar overzicht</button></div>
-  `);
-}
-function labelStage(s){return s==='diagnostic'?'Korte diagnose':s==='basic'?'Gerichte basisoefeningen':'Complexere oefeningen'}
-function answer(i){
-  const qs=content[current.module][current.stage]; const q=qs[current.qIndex]; const btns=[...document.querySelectorAll('.choice')]; btns.forEach((b,j)=>{b.disabled=true; if(j===q.correct)b.classList.add('correct'); if(j===i&&i!==q.correct)b.classList.add('wrong')});
-  const ok=i===q.correct; if(ok) current.score++; current.answers.push(ok);
-  const feedback=document.getElementById('feedback');
-  feedback.innerHTML=`<div class="feedback ${ok?'ok':'bad'}"><strong>${ok?'Juist.':'Nog niet.'}</strong> ${q.explain||defaultExplain(current.module,current.stage)}</div><div class="actions"><button class="btn" onclick="nextQuestion()">Verder</button></div>`;
-}
-function defaultExplain(module,stage){
-  if(module==='vergelijk') return 'Controleer richting, zin en grootte afzonderlijk.';
-  if(module==='tekenen') return 'Denk eerst aan richting, zin en grootte; bij een som gebruik je de diagonaal van het parallellogram.';
-  return 'Zet mintekens om naar tegengestelde vectoren en zoek daarna kettingen die aansluiten.';
-}
-function nextQuestion(){
-  const qs=content[current.module][current.stage];
-  if(current.qIndex<qs.length-1){current.qIndex++; renderQuiz(); return;}
-  finishStage();
-}
-function finishStage(){
-  const stage=current.stage, score=current.score, total=content[current.module][stage].length;
-  if(stage==='diagnostic'){
-    if(score===total){
-      renderBranch('Sterke diagnose',`${score}/${total}`,`Je basis zit goed. Je mag de uitleg overslaan en meteen naar complexere toepassingen.`,()=>startStage('complex'),'Toch uitleg bekijken',()=>renderLesson('diagnostic'));
-    } else {
-      renderBranch('Remediëring aanbevolen',`${score}/${total}`,`Je krijgt nu eerst een korte uitleg, daarna enkele eenvoudige oefeningen.`,()=>renderLesson('diagnostic'),'Terug naar overzicht',home);
-    }
-  } else if(stage==='basic'){
-    if(score>=2){ renderBranch('Basis beheerst',`${score}/${total}`,`Goed. Nu verhogen we het niveau.`,()=>startStage('complex'),'Uitleg nog eens bekijken',()=>renderLesson('basic')); }
-    else { renderBranch('Nog één extra ronde',`${score}/${total}`,`Je krijgt de uitleg opnieuw in compacte vorm. Daarna proberen we de basisoefeningen opnieuw.`,()=>renderLesson('retry'),'Terug naar overzicht',home); }
-  } else {
-    const passed=score>=Math.ceil(total*0.66);
-    if(passed){ state.done[current.module]=true; save(); renderBranch('Onderdeel afgerond',`${score}/${total}`,`Je hebt dit onderdeel voldoende beheerst. Ga door naar het volgende remediëringsblok.`,()=>home,'Nog eens oefenen',()=>startStage('complex')); }
-    else { renderBranch('Nog niet stabiel genoeg',`${score}/${total}`,`We schakelen terug naar de basis. Na een korte herhaling krijg je opnieuw eenvoudige oefeningen.`,()=>renderLesson('retry'),'Terug naar overzicht',home); }
-  }
-}
-function renderBranch(title,score,text,primary,secondaryLabel,secondary){
-  setProgress(title, current.stage==='complex'?30:18);
-  window._primary=primary; window._secondary=secondary;
-  screen(`<span class="eyebrow">Adaptieve keuze</span><h2>${title}</h2><div class="scorebox"><div class="scorebig">${score}</div><div>${text}</div></div><div class="branch"><strong>Wat gebeurt er nu?</strong><br>De volgende stap wordt bepaald door je antwoorden, niet door een vaste lange reeks pagina's.</div><div class="actions"><button class="btn" onclick="_primary()">Verder</button><button class="btn secondary" onclick="_secondary()">${secondaryLabel}</button></div>`);
-}
-function renderLesson(mode){
-  const lesson=content[current.module].lesson; const idx=modules.findIndex(x=>x.id===current.module); setProgress(`${modules[idx].title} • uitleg`,Math.round(idx*33+13));
-  const retry = mode==='retry';
-  screen(`<span class="eyebrow">${retry?'Herhaling':'Gerichte uitleg'}</span><h2>${lesson.title}</h2><p class="lead">Lees dit rustig. Je hoeft niet te scrollen naar een volgend hoofdstuk: na deze pagina krijg je meteen oefeningen op precies dit idee.</p>${lesson.body}<div class="actions"><button class="btn" onclick="startStage('basic')">${retry?'Probeer de basis opnieuw':'Oefen dit nu'}</button><button class="btn secondary" onclick="home()">Terug naar overzicht</button></div>`);
-}
-function startStage(stage){ current.view='quiz'; current.stage=stage; current.qIndex=0; current.score=0; current.answers=[]; renderQuiz(); }
+function lessonRoute(){setProgress('1/5 • gerichte uitleg',18);screen(`<span class="eyebrow">Gerichte uitleg</span><h2>Denk eerst aan een route</h2>${path(0)}<div class="lesson-grid"><div class="box explain"><h3>De kettingregel</h3><p>Als het eindpunt van de eerste vector gelijk is aan het beginpunt van de tweede:</p><p class="rule math">${v('AB')} + ${v('BC')} = ${v('AC')}</p><ol><li>Start in A.</li><li>Ga naar B.</li><li>Ga daarna van B naar C.</li><li>De rechtstreekse vector is A → C.</li></ol></div><div class="box tip"><h3>Typische fout</h3><p>${v('AB')} + ${v('CB')} vormt <strong>geen</strong> aansluitende ketting.</p><p>De eerste vector eindigt in B, de tweede begint in C.</p><p class="small">Dus: nooit zomaar letters “schrappen”.</p></div></div>${svgABC()}<div class="actions"><button class="btn" onclick="basicRoute()">Oefen dit nu</button></div>`)}
 
-document.getElementById('resetBtn').addEventListener('click',()=>{if(confirm('Alle lokale voortgang wissen?')){localStorage.removeItem(STORAGE);state=freshState();home();}});
-window.home=home; window.startDiagnostic=startDiagnostic; window.startRecommended=startRecommended; window.answer=answer; window.nextQuestion=nextQuestion; window.startStage=startStage; window.renderLesson=renderLesson;
+function svgABC(){return `<div class="svg-card"><svg viewBox="0 0 700 190" aria-label="route A naar B naar C"><defs><marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#315f86"/></marker></defs><line x1="90" y1="100" x2="330" y2="100" stroke="#315f86" stroke-width="5" marker-end="url(#arr)"/><line x1="350" y1="100" x2="600" y2="100" stroke="#315f86" stroke-width="5" marker-end="url(#arr)"/><circle cx="80" cy="100" r="7" fill="#16313a"/><circle cx="340" cy="100" r="7" fill="#16313a"/><circle cx="610" cy="100" r="7" fill="#16313a"/><text x="64" y="140" font-size="26">A</text><text x="328" y="140" font-size="26">B</text><text x="598" y="140" font-size="26">C</text><path d="M85,55 Q345,5 605,55" fill="none" stroke="#66558f" stroke-width="3" stroke-dasharray="7 7" marker-end="url(#arr)"/><text x="286" y="35" font-size="22" fill="#66558f">AB + BC = AC</text></svg><div class="caption">Een vectorsom als route: A → B → C.</div></div>`}
+
+function basicRoute(){
+ setProgress('1/5 • basisherstel',24);screen(`<span class="eyebrow">Basisherstel</span><h2>Twee korte controles</h2>${path(0)}
+ <div class="question"><h3>1. ${v('PQ')} + ${v('QR')} = …</h3><div class="choices"><button class="choice" onclick="routeAnswer(this,true,1)">${v('PR')}</button><button class="choice" onclick="routeAnswer(this,false,1)">${v('RP')}</button></div><div id="r1"></div></div>
+ <div class="question"><h3>2. Welke som vormt onmiddellijk een ketting?</h3><div class="choices"><button class="choice" onclick="routeAnswer(this,false,2)">${v('AB')} + ${v('DC')}</button><button class="choice" onclick="routeAnswer(this,true,2)">${v('AB')} + ${v('BD')}</button><button class="choice" onclick="routeAnswer(this,false,2)">${v('BA')} + ${v('BC')}</button></div><div id="r2"></div></div>
+ <div id="routeNext"></div>`);window.routeOK={1:false,2:false}
+}
+function routeAnswer(btn,ok,n){btn.parentElement.querySelectorAll('button').forEach(b=>b.disabled=true);btn.classList.add(ok?'correct':'wrong');document.getElementById('r'+n).innerHTML=`<div class="feedback ${ok?'ok':'bad'}">${ok?'Correct.':'Niet correct. Controleer eindpunt → beginpunt.'}</div>`;window.routeOK[n]=ok; if(document.querySelectorAll('#r1 .feedback,#r2 .feedback').length===2){const pass=window.routeOK[1]&&window.routeOK[2];document.getElementById('routeNext').innerHTML=`<div class="actions"><button class="btn" onclick="${pass?'minusDiag':'lessonRoute'}()">${pass?'Naar aftrekken':'Herbekijk de route'}</button></div>`}}
+
+function minusDiag(){mcq({label:'2/5 • aftrekken',pct:34,eyebrow:'Diagnose aftrekken',title:'Wat betekent een minvector?',q:`Vereenvoudig eerst: −${v('CB')} = …`,choices:[v('BC'),v('CB'),'de nulvector'],correct:0,onCorrect:'minusApply',onWrong:'lessonMinus',whyCorrect:'De grootte en richting blijven, alleen de zin keert om.',whyWrong:'Een min voor een vector keert de zin om. Dus −CB = BC.'})}
+function minusApply(){mcq({label:'2/5 • toepassen',pct:40,eyebrow:'Diagnose aftrekken',title:'Van aftrekken naar een route',q:`${v('AB')} − ${v('CB')} = …`,choices:[v('AC'),v('CA'),'0'],correct:0,onCorrect:'reorderIntro',onWrong:'lessonMinus',whyCorrect:`Want −${v('CB')} = ${v('BC')}; daarna ${v('AB')} + ${v('BC')} = ${v('AC')}.`,whyWrong:'Zet eerst het aftrekken om in het optellen van de tegengestelde vector.'})}
+function lessonMinus(){setProgress('2/5 • gerichte uitleg',38);screen(`<span class="eyebrow">Gerichte uitleg</span><h2>Aftrekken = tegengestelde vector optellen</h2>${path(1)}<div class="lesson-grid"><div class="box explain"><h3>Vaste zet</h3><p class="rule math">${v('a')} − ${v('b')} = ${v('a')} + (−${v('b')})</p><p>Dus:</p><p class="math">${v('AB')} − ${v('CB')} = ${v('AB')} + ${v('BC')} = ${v('AC')}</p></div><div class="box tip"><h3>Wat verandert?</h3><ul><li>grootte: blijft gelijk</li><li>richting: blijft gelijk</li><li>zin: keert om</li></ul></div></div><div class="actions"><button class="btn" onclick="minusApply()">Probeer opnieuw</button></div>`)}
+
+function reorderIntro(){setProgress('3/5 • herschikken',52);screen(`<span class="eyebrow">Niveau 2</span><h2>Bouw zelf een ketting</h2>${path(2)}<p class="lead">Bij complexere uitdrukkingen staan de vectoren niet altijd in een handige volgorde. Sleep ze zodat de eindpunten en beginpunten aansluiten.</p><div class="question"><h3>Maak een ketting van A naar D</h3><div id="dragZone" class="drag-zone"></div><p class="drag-help">Sleep de blokken in de juiste volgorde.</p><div id="dragFeedback"></div></div><div class="actions"><button class="btn" onclick="checkDrag()">Controleer volgorde</button><button class="btn secondary" onclick="shuffleDrag()">Meng opnieuw</button></div>`);setupDrag(['CD','AB','BC'])}
+function setupDrag(items){const z=document.getElementById('dragZone');z.innerHTML='';items.forEach(t=>{const d=document.createElement('div');d.className='drag-item';d.draggable=true;d.dataset.val=t;d.innerHTML=v(t);d.addEventListener('dragstart',()=>d.classList.add('dragging'));d.addEventListener('dragend',()=>d.classList.remove('dragging'));z.appendChild(d)});z.addEventListener('dragover',e=>{e.preventDefault();const dragging=z.querySelector('.dragging');const after=[...z.querySelectorAll('.drag-item:not(.dragging)')].find(el=>e.clientX<el.getBoundingClientRect().left+el.offsetWidth/2);if(!dragging)return;after?z.insertBefore(dragging,after):z.appendChild(dragging)})}
+function shuffleDrag(){setupDrag(['BC','CD','AB'].sort(()=>Math.random()-.5));document.getElementById('dragFeedback').innerHTML=''}
+function checkDrag(){const order=[...document.querySelectorAll('.drag-item')].map(x=>x.dataset.val).join(',');const ok=order==='AB,BC,CD';document.getElementById('dragFeedback').innerHTML=`<div class="feedback ${ok?'ok':'bad'}">${ok?`Goed: ${v('AB')} + ${v('BC')} + ${v('CD')} = ${v('AD')}.`:'Nog niet. Zoek een ketting A → B → C → D.'}</div>${ok?'<div class="actions"><button class="btn" onclick="geometry1()">Naar meetkunde</button></div>':''}`}
+
+function geometry1(){setProgress('4/5 • meetkunde',pct=68);screen(`<span class="eyebrow">Transfer naar figuren</span><h2>Dezelfde vector, verschillende routes</h2>${path(3)}<p class="lead">Nu gebruiken we vectorrekening in een meetkundige figuur. Dit is de brug naar de latere toepassingen.</p>${svgQuad()}<div class="question"><h3>Welke twee uitdrukkingen zijn allebei gelijk aan ${v('AC')}?</h3><div class="choices"><button class="choice" onclick="geoAns(this,true)">${v('AB')} + ${v('BC')} én ${v('AD')} + ${v('DC')}</button><button class="choice" onclick="geoAns(this,false)">${v('AB')} + ${v('CD')} én ${v('AD')} + ${v('BC')}</button></div><div id="geoFb"></div></div>`)}
+function svgQuad(){return `<div class="svg-card"><svg viewBox="0 0 650 360"><defs><marker id="a2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#315f86"/></marker></defs><polygon points="100,260 210,80 500,95 550,270" fill="#f6fafc" stroke="#9eb3c0" stroke-width="3"/><line x1="100" y1="260" x2="500" y2="95" stroke="#66558f" stroke-width="4" marker-end="url(#a2)"/><text x="75" y="292" font-size="26">A</text><text x="195" y="65" font-size="26">B</text><text x="505" y="85" font-size="26">C</text><text x="556" y="290" font-size="26">D</text><text x="315" y="160" font-size="22" fill="#66558f">AC</text></svg><div class="caption">Van A naar C kun je via B of via D gaan.</div></div>`}
+function geoAns(btn,ok){btn.parentElement.querySelectorAll('button').forEach(b=>b.disabled=true);btn.classList.add(ok?'correct':'wrong');document.getElementById('geoFb').innerHTML=`<div class="feedback ${ok?'ok':'bad'}">${ok?'Juist. De eindvector hangt af van begin- en eindpunt, niet van de gekozen route.':'Niet juist. Beide routes moeten werkelijk in A starten en in C eindigen.'}</div><div class="actions"><button class="btn" onclick="${ok?'spacePreview':'geometry1'}()">${ok?'Naar ruimtefiguren':'Probeer opnieuw'}</button></div>`}
+
+function spacePreview(){setProgress('5/5 • vooruitblik ruimte',84);screen(`<span class="eyebrow">Vooruitblik</span><h2>Dezelfde gedachte in een balk</h2>${path(4)}<p class="lead">Dit is nog geen volledige 3D-module. We tonen alleen waarom deze remediëring hier naartoe werkt.</p>${svgCube()}<div class="question"><h3>Welke route geeft ${v('AG')}?</h3><div class="choices"><button class="choice" onclick="spaceAns(this,true)">${v('AB')} + ${v('BC')} + ${v('CG')}</button><button class="choice" onclick="spaceAns(this,false)">${v('AB')} + ${v('CD')} + ${v('FG')}</button><button class="choice" onclick="spaceAns(this,false)">${v('BA')} + ${v('BC')} + ${v('CG')}</button></div><div id="spaceFb"></div></div>`)}
+function svgCube(){return `<div class="svg-card"><svg viewBox="0 0 700 430"><defs><marker id="a3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#315f86"/></marker></defs><g fill="none" stroke="#8fa8b6" stroke-width="3"><rect x="110" y="150" width="300" height="210"/><rect x="250" y="70" width="300" height="210"/><line x1="110" y1="150" x2="250" y2="70"/><line x1="410" y1="150" x2="550" y2="70"/><line x1="410" y1="360" x2="550" y2="280"/><line x1="110" y1="360" x2="250" y2="280"/></g><g font-size="24"><text x="86" y="385">A</text><text x="392" y="386">B</text><text x="565" y="300">C</text><text x="235" y="305">D</text><text x="88" y="142">E</text><text x="395" y="142">F</text><text x="562" y="62">G</text><text x="235" y="62">H</text></g><polyline points="110,360 410,360 550,280 550,70" fill="none" stroke="#315f86" stroke-width="5" marker-end="url(#a3)"/><line x1="110" y1="360" x2="550" y2="70" stroke="#66558f" stroke-width="3" stroke-dasharray="8 8" marker-end="url(#a3)"/></svg><div class="caption">Een 3D-route gebruikt exact hetzelfde kop-staartprincipe.</div></div>`}
+function spaceAns(btn,ok){btn.parentElement.querySelectorAll('button').forEach(b=>b.disabled=true);btn.classList.add(ok?'correct':'wrong');document.getElementById('spaceFb').innerHTML=`<div class="feedback ${ok?'ok':'bad'}">${ok?'Correct. A → B → C → G geeft rechtstreeks A → G.':'Nog niet. Controleer elk aansluitpunt van de route.'}</div><div class="actions"><button class="btn" onclick="${ok?'finish':'spacePreview'}()">${ok?'Afronden':'Opnieuw'}</button></div>`}
+
+function finish(){state.mastery='groen';state.stage='done';save();setProgress('Module 5 • afgerond',100);screen(`<span class="eyebrow">Module afgerond</span><h1>Van route naar meetkunde</h1><div class="success"><strong>Beheerst in deze prototype-route:</strong> kettingregel, aftrekken via tegengestelde vector, vectoren herschikken, routes in een figuur en de transfergedachte naar een ruimtefiguur.</div><div class="status-grid"><div class="status-card green"><strong>Route lezen</strong>voldoende</div><div class="status-card green"><strong>Aftrekken</strong>voldoende</div><div class="status-card green"><strong>Transfer</strong>voldoende</div></div><p class="lead">De volgende uitbreidingsstap kan meer variatie toevoegen: extra fouttypes, moeilijkere figuren, score per deelvaardigheid en later opslag per leerling.</p><div class="actions"><button class="btn" onclick="home()">Opnieuw doorlopen</button></div>`)}
+
+document.getElementById('resetBtn').addEventListener('click',()=>{if(confirm('Lokale voortgang wissen?')){localStorage.removeItem(STORAGE);state=fresh();home()}});
+Object.assign(window,{home,teacherOverview,diag1,diag2,lessonRoute,basicRoute,routeAnswer,minusDiag,minusApply,lessonMinus,reorderIntro,checkDrag,shuffleDrag,geometry1,geoAns,spacePreview,spaceAns,finish,choose});
 home();
