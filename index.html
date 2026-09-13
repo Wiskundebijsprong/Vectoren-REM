@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vectoren REM – Remediëring</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">REM</div>
+      <div>
+        <strong>Vectoren REM</strong>
+        <span>remediëring • 3SO • Wiskunde</span>
+      </div>
+    </div>
+    <div class="progress-wrap" aria-label="Voortgang">
+      <div class="progress-label"><span id="progressText">Start</span><span id="progressPct">0%</span></div>
+      <div class="progress"><div id="progressBar"></div></div>
+    </div>
+  </header>
+
+  <main id="app" class="shell" aria-live="polite"></main>
+
+  <footer>
+    <span>Vectoren REM</span>
+    <button class="link-btn" id="resetBtn" type="button">Voortgang wissen</button>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
